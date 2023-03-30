@@ -37,7 +37,11 @@ def read_csv_files(folder_path):
                 dataframe_collection[file_name]=pd.DataFrame(df)
     return dataframe_collection
 
-# Step 2: For each dataframe extract rolling window
+# Step 2: For each dataframe extract rolling window (and features?)
+# Feature Extraction here probably?
+
+# NOTE: Apparently we cannot store a rolling window object into hdf5 BUT we can store the features of the rolling window instead
+# TO DO: Feature extraction guy, make it so we add each rolling window feature into rolling_window_collection
 def extract_rolling_window(data_dict):
     """
     Extracts rolling window features from a dictionary of DataFrames.
@@ -52,9 +56,8 @@ def extract_rolling_window(data_dict):
     for key in data_dict.keys():
         df = data_dict[key]
         df = df.astype('float64')
-        # NOTE: Please ensure when performing rolling windows are converted to float64, system will blow up if not
-        rolling_window = df.rolling(window=5, min_periods=1) 
-        rolling_window_collection[key + "_window"] = rolling_window
+        rolling_window = df.rolling(window=5).sum()
+        rolling_window_collection[key + "_window"] = rolling_window 
 
         # TO DO: Figure out how to extract features here
 
@@ -70,10 +73,6 @@ def extract_rolling_window(data_dict):
         #     'skew': rolling_window.skew(),
         #     # Add additional features as needed
         # }
-        # feature_df = pd.concat(feature_dict, axis=1, keys=feature_dict.keys())
-        # feature_df.columns = feature_df.columns.map(lambda x: f"{key}_{x[0]}_{x[1]}")
-        # features.append(feature_df)
-    # features_df = pd.concat(features, axis=1)
     return rolling_window_collection
 
 # Stage 3: sort data frames into groups
@@ -84,16 +83,17 @@ def write_dataframes_to_hdf5_group(dataframes_dict, file_path, group):
             group.create_dataset(key, data = value)
             
 def write_windows_to_hdf5_group(dataframes_dict, file_path, group):
-    with pd.HDFStore(file_path) as store:
+    print("Storing rolling windows into HDF5...")
+    with h5py.File(file_path, 'w') as f:
         for key, value in dataframes_dict.items():
-            store.put(group, value)
+            rolling_window = value
+            dataset = group.create_dataset(key, shape=dataframes_dict.shape, dtype='f')
+            dataset.write(rolling_window.to_numpy())
 
 # Stage ?: preprocessing
 def preprocess():
     print("Preprocessing...")
     # cut off low-freq noise
-
-# Stage ?: feature extraction
 
 
 # Main Function
@@ -116,7 +116,6 @@ def main():
     dataMem2Window = extract_rolling_window(dataMem2)
     dataMem3Window = extract_rolling_window(dataMem3)
 
-    print(dataMem1Window)
     # TO DO: Add dictionary for windows of data frames
 
     output_file = 'data.h5'
@@ -124,6 +123,7 @@ def main():
     mem1_group = output.create_group("Harrison Dataset")
     mem2_group = output.create_group("Josh Dataset")
     mem3_group = output.create_group("Jacintha Dataset")
+    window_group = output.create_group("Window")
 
     # TO DO: Figure out how to get rolling window into hdf5 
     # CURR ERROR: Object dtype dtype('O') has no native HDF5 equivalent
@@ -132,7 +132,8 @@ def main():
     write_dataframes_to_hdf5_group(dataMem1, output_file, mem1_group)
     write_dataframes_to_hdf5_group(dataMem2, output_file, mem2_group)
     write_dataframes_to_hdf5_group(dataMem3, output_file, mem3_group)
-    #write_dataframes_to_hdf5_group(dataMem1Window, output_file, window_group)
+
+    write_dataframes_to_hdf5_group(dataMem1Window, output_file, window_group)
 
     # TO DO: Add Preprocessing
 
@@ -144,7 +145,7 @@ def main():
         mem1_items=list(mem1_group.items())
         mem2_items=list(mem2_group.items())
         mem3_items=list(mem3_group.items())
-        #window_items = list(window_group.items())
+        window_items = list(window_group.items())
         print("\n#######     Harrison    #######")
         for item in mem1_items:
             print(item)
@@ -155,9 +156,9 @@ def main():
         for item in mem3_items:
             print(item)
 
-        #print("\n#######     Windows    #######")
-        #for item in window_items:
-        #    print(item)
+        print("\n#######     Windows    #######")
+        for item in window_items:
+            print(item)
 
 if __name__ == "__main__":
     main()
