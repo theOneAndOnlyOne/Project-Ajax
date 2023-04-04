@@ -40,7 +40,7 @@ def read_csv_files(folder_path):
 # Step 2: For each dataframe extract rolling window (and features?)
 # Feature Extraction here probably?
 
-# NOTE: Apparently we cannot store a rolling window object into hdf5 BUT we can store the features of the rolling window instead
+# NOTE: Apparently we cannot store a rolling window object into hdf5 BUT we can store the "features" of the rolling window instead into that file
 # TO DO: Feature extraction guy, make it so we add each rolling window feature into rolling_window_collection
 def extract_rolling_window(data_dict):
     """
