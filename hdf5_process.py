@@ -58,7 +58,7 @@ def extract_rolling_window(data_dict):
         df = df.astype('float64')
         rolling_window = df.rolling(window=5).sum()
         rolling_window_collection[key + "_window"] = rolling_window 
-
+#Jacintha
         # TO DO: Figure out how to extract features here
 
         # feature_dict = {
