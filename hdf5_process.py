@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import h5py
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
+
 from sklearn import preprocessing
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
@@ -19,6 +19,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.inspection import DecisionBoundaryDisplay
 from sklearn.decomposition import PCA
+
 # Step 1: Read from csv files
 def read_csv_files(folder_path):
     """
@@ -30,6 +31,7 @@ def read_csv_files(folder_path):
     Returns:
     - dataframe_collection: a Dataframe collection with key for it's fileanme and a value containing raw data formated as Dataframes
     """
+
     print("Converting files to data frames from " + folder_path + " ...")
     dataframe_collection = {}
 
@@ -39,7 +41,7 @@ def read_csv_files(folder_path):
         # indicate folder
         activity_path = folder_path + '/' + activity
 
-        # gove through each file and check if they are csv
+        # go through each file and check if they are csv
         for file_name in os.listdir(activity_path):
             #print(file_name)
             if file_name.endswith('.csv'):
@@ -52,7 +54,6 @@ def read_csv_files(folder_path):
     return dataframe_collection
 
 # Step 2: For each dataframe extract rolling window (and features?)
-# Feature Extraction here probably?
 
 # NOTE: Apparently we cannot store a rolling window object into hdf5 BUT we can store the "features" of the rolling window instead into that file
 # TO DO: Feature extraction guy, make it so we add each rolling window feature into rolling_window_collection
@@ -95,12 +96,31 @@ def extract_rolling_window(data_dict):
         features['kurt']= kurt
         features['skew'] = skew
         features['state'] = state # idk even know what im doing here lmao
+
         rolling_window_collection[key + "_features"] = features
 
     return rolling_window_collection
 
+# Step 2.1 : Preprocess each dataset before extracting features
+def preprocess_dataframe(df):
+    print("Preprocessing...")
+    sc = preprocessing.StandardScaler()
+    df = pd.DataFrame(data=sc.fit_transform(df))
+    return df
+
 # Stage 3: sort data frames into groups
 def write_dataframes_to_hdf5_group(dataframes_dict, file_path, group):
+    """
+    Writes dataframe dictionary to a given group stored in a file path
+    
+    Args:
+    - dataframes_dict (dict): a dictionary of DataFrames, where the keys are the names of the DataFrames
+    - file_path (string) : file path of hdf5 file
+    - group (hdf5 group) : specified group we want to store our info in
+    
+    Returns:
+    - none
+    """
     print("Storing original files into HDF5...")
     with h5py.File(file_path, 'a') as f:
         for key, value in dataframes_dict.items():
@@ -114,32 +134,49 @@ def write_windows_to_hdf5_group(dataframes_dict, file_path, group):
             dataset = group.create_dataset(key, shape=dataframes_dict.shape, dtype='f')
             dataset.write(rolling_window.to_numpy())
 
-# Stage ?: preprocessing
-def preprocess_dataframe(df):
-    print("Preprocessing...")
-    sc = preprocessing.StandardScaler()
-    df = pd.DataFrame(data=sc.fit_transform(df))
-    return df
-
-# classifier
+# Step 4: run classifier to train and test dataset
 def classifier(df):
     df = df.dropna()
     print("Splitting dataframe to test and train")
     X_train, X_test, Y_train, Y_test = train_test_split(df[['max', 'min', 'mean', 'median', 'range', 'std', 'var', 'kurt', 'skew']], df['state'], test_size=0.1, shuffle=True)
     # create the classifier
-    clf = LogisticRegression()
-    print("fitting to logistic regression")
+    l_reg = LogisticRegression(max_iter = 10000)
+    scaler = StandardScaler()
+    clf = make_pipeline(scaler,l_reg)
+    
+    print("fitting to pipeline")
     clf.fit(X_train, Y_train)
-    print("### COMPLETE ###\n")
+    print("\n### COMPLETE ###\n")
     accuracy = clf.score(X_test,Y_test)
     print('Accuracy:', accuracy)
+
 # Main Function
 def main(): 
     print("starting...")
+
+    current_dir = os.getcwd()
+
+    if os.path.exists(os.path.join(current_dir, 'Harrison Dataset')) and os.path.isdir(os.path.join(current_dir, 'Harrison Dataset')):
+        print('Found the "Harrison Dataset" folder in the current directory.')
+    else:
+        print('Could not find the "Harrison Dataset" folder in the current directory.')
+
+    if os.path.exists(os.path.join(current_dir, 'Josh Dataset')) and os.path.isdir(os.path.join(current_dir, 'Josh Dataset')):
+        print('Found the "Josh Dataset" folder in the current directory.')
+    else:
+        print('Could not find the "Josh Dataset" folder in the current directory.')
+
+    if os.path.exists(os.path.join(current_dir, 'Jacintha Dataset')) and os.path.isdir(os.path.join(current_dir, 'Jacintha Dataset')):
+        print('Found the "Jacintha Dataset" folder in the current directory.')
+    else:
+        print('Could not find the "Jacintha Dataset" folder in the current directory.')
+
     folder_paths = [
-        'C:\\Users\\joshu\\Project-Ajax\\Harrison Dataset',
-        'C:\\Users\\joshu\\Project-Ajax\\Josh Dataset', 
-        'C:\\Users\\joshu\\Project-Ajax\\Jacintha Dataset']
+        os.path.join(current_dir, 'Harrison Dataset'),
+        os.path.join(current_dir, 'Josh Dataset'),
+        os.path.join(current_dir, 'Jacintha Dataset'),
+
+    ]
 
     dataMem1 = {}
     dataMem2 = {}
@@ -171,21 +208,14 @@ def main():
     mem1_group = output.create_group("Harrison Dataset")
     mem2_group = output.create_group("Josh Dataset")
     mem3_group = output.create_group("Jacintha Dataset")
-    window_group = output.create_group("Window")
+    classifier_data = output.create_group("Classifier Data")
 
-    # TO DO: Figure out how to get rolling window into hdf5 
-    # CURR ERROR: Object dtype dtype('O') has no native HDF5 equivalent
-
-    #window_group = output.create_group("Windows") 
     write_dataframes_to_hdf5_group(dataMem1, output_file, mem1_group)
     write_dataframes_to_hdf5_group(dataMem2, output_file, mem2_group)
     write_dataframes_to_hdf5_group(dataMem3, output_file, mem3_group)
 
-    #write_dataframes_to_hdf5_group(dataMem1Window, output_file, window_group)
+    # TO DO: add classifier data to a group
 
-    # TO DO: Add Preprocessing
-    
-    # TO DO: Add Feature Extraction
     # Prints HDF5 structure
     #with h5py.File(output_file, 'r') as hdf:
     #    items = list(hdf.items())
