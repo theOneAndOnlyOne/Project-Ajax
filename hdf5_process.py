@@ -4,7 +4,21 @@ import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-
+from sklearn import preprocessing
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import roc_curve
+from sklearn.metrics import RocCurveDisplay
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import f1_score
+from sklearn.pipeline import make_pipeline
+from sklearn.linear_model import LogisticRegression
+from sklearn.inspection import DecisionBoundaryDisplay
+from sklearn.decomposition import PCA
 # Step 1: Read from csv files
 def read_csv_files(folder_path):
     """
@@ -54,26 +68,35 @@ def extract_rolling_window(data_dict):
     """
     rolling_window_collection = {}
     for key in data_dict.keys():
+        features = pd.DataFrame(columns = ['max', 'min', 'mean', 'median', 'range', 'std', 'var', 'kurt', 'skew', 'state'])
+        print("extracting " + key)
         df = data_dict[key]
         df = df.astype('float64')
-        rolling_window = df.rolling(window=5).sum()
-        rolling_window_collection[key + "_window"] = rolling_window 
-#Jacintha
-#Josh
-        # TO DO: Figure out how to extract features here
+        df_preprocessed = preprocess_dataframe(df)
+        df_abs = df_preprocessed.iloc[:,4]
+        max = df_abs.rolling(window=5).max()                 
+        min = df_abs.rolling(window=5).min()
+        mean = df_abs.rolling(window=5).mean()
+        median =df_abs.rolling(window=5).median()
+        range = df_abs.rolling(window=5).apply(lambda x: x.max() - x.min())
+        std = df_abs.rolling(window=5).std()
+        var = df_abs.rolling(window=5).var()
+        kurt = df_abs.rolling(window=5).kurt()
+        skew = df_abs.rolling(window=5).skew()
+        state = df.iloc[:,5].rolling(window=5).mean() # idk even know what im doing here lmao
+        #print(max)
+        features['max'] = max                
+        features['min'] = min
+        features['mean'] = mean
+        features['median'] = median
+        features['range'] = range
+        features['std'] = std
+        features['var'] = var
+        features['kurt']= kurt
+        features['skew'] = skew
+        features['state'] = state # idk even know what im doing here lmao
+        rolling_window_collection[key + "_features"] = features
 
-        # feature_dict = {
-        #     'max': rolling_window.max(),
-        #     'min': rolling_window.min(),
-        #     'mean': rolling_window.mean(),
-        #     'median': rolling_window.median(),
-        #     'range': rolling_window.apply(lambda x: x.max() - x.min()),
-        #     'std': rolling_window.std(),
-        #     'var': rolling_window.var(),
-        #     'kurt': rolling_window.kurt(),
-        #     'skew': rolling_window.skew(),
-        #     # Add additional features as needed
-        # }
     return rolling_window_collection
 
 # Stage 3: sort data frames into groups
@@ -92,13 +115,27 @@ def write_windows_to_hdf5_group(dataframes_dict, file_path, group):
             dataset.write(rolling_window.to_numpy())
 
 # Stage ?: preprocessing
-def preprocess():
+def preprocess_dataframe(df):
     print("Preprocessing...")
-    # cut off low-freq noise
+    sc = preprocessing.StandardScaler()
+    df = pd.DataFrame(data=sc.fit_transform(df))
+    return df
 
-
+# classifier
+def classifier(df):
+    df = df.dropna()
+    print("Splitting dataframe to test and train")
+    X_train, X_test, Y_train, Y_test = train_test_split(df[['max', 'min', 'mean', 'median', 'range', 'std', 'var', 'kurt', 'skew']], df['state'], test_size=0.1, shuffle=True)
+    # create the classifier
+    clf = LogisticRegression()
+    print("fitting to logistic regression")
+    clf.fit(X_train, Y_train)
+    print("### COMPLETE ###\n")
+    accuracy = clf.score(X_test,Y_test)
+    print('Accuracy:', accuracy)
 # Main Function
 def main(): 
+    print("starting...")
     folder_paths = [
         'C:\\Users\\joshu\\Project-Ajax\\Harrison Dataset',
         'C:\\Users\\joshu\\Project-Ajax\\Josh Dataset', 
@@ -113,12 +150,22 @@ def main():
     dataMem2 = read_csv_files(folder_paths[1])
     dataMem3 = read_csv_files(folder_paths[2])
 
-    dataMem1Window = extract_rolling_window(dataMem1)
-    dataMem2Window = extract_rolling_window(dataMem2)
-    dataMem3Window = extract_rolling_window(dataMem3)
+    dataMem1WindowFeatures = extract_rolling_window(dataMem1)
+    dataMem2WindowFeatures = extract_rolling_window(dataMem2)
+    dataMem3WindowFeatures = extract_rolling_window(dataMem3)
+    
+    print("Merging features from all members...")
+    feature_list = []
 
+    for d in [dataMem1WindowFeatures, dataMem2WindowFeatures, dataMem3WindowFeatures]:
+        for df in d.values():
+            feature_list.append(df)
+
+    feature_dataframe = pd.concat(feature_list,ignore_index=True)
+    #print(feature_dataframe)
     # TO DO: Add dictionary for windows of data frames
-
+    print("Initiating classification")
+    classifier(feature_dataframe)
     output_file = 'data.h5'
     output = h5py.File(output_file, 'w')
     mem1_group = output.create_group("Harrison Dataset")
@@ -134,32 +181,32 @@ def main():
     write_dataframes_to_hdf5_group(dataMem2, output_file, mem2_group)
     write_dataframes_to_hdf5_group(dataMem3, output_file, mem3_group)
 
-    write_dataframes_to_hdf5_group(dataMem1Window, output_file, window_group)
+    #write_dataframes_to_hdf5_group(dataMem1Window, output_file, window_group)
 
     # TO DO: Add Preprocessing
-
+    
     # TO DO: Add Feature Extraction
     # Prints HDF5 structure
-    with h5py.File(output_file, 'r') as hdf:
-        items = list(hdf.items())
-        print(items)
-        mem1_items=list(mem1_group.items())
-        mem2_items=list(mem2_group.items())
-        mem3_items=list(mem3_group.items())
-        window_items = list(window_group.items())
-        print("\n#######     Harrison    #######")
-        for item in mem1_items:
-            print(item)
-        print("\n#######       Josh      #######")
-        for item in mem2_items:
-            print(item)
-        print("\n#######     Jacintha    #######")
-        for item in mem3_items:
-            print(item)
-
-        print("\n#######     Windows    #######")
-        for item in window_items:
-            print(item)
+    #with h5py.File(output_file, 'r') as hdf:
+    #    items = list(hdf.items())
+    #    print(items)
+    #    mem1_items=list(mem1_group.items())
+    #    mem2_items=list(mem2_group.items())
+    #    mem3_items=list(mem3_group.items())
+    #    window_items = list(window_group.items())
+    #    print("\n#######     Harrison    #######")
+    #    for item in mem1_items:
+    #        print(item)
+    #    print("\n#######       Josh      #######")
+    #    for item in mem2_items:
+    #        print(item)
+    #    print("\n#######     Jacintha    #######")
+    #    for item in mem3_items:
+    #        print(item)
+#
+    #    print("\n#######     Windows    #######")
+    #    for item in window_items:
+    #        print(item)
 
 if __name__ == "__main__":
     main()
