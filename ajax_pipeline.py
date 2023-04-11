@@ -20,7 +20,7 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import classification_report
 from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import LogisticRegression
-from sklearn.inspection import DecisionBoundaryDisplay
+#from sklearn.inspection import DecisionBoundaryDisplay
 from sklearn.decomposition import PCA
 
 # Step 1: Read from csv files
@@ -174,7 +174,7 @@ def classifier(df):
     l_reg = LogisticRegression(max_iter = 10000)
     scaler = StandardScaler()
     clf = make_pipeline(scaler,l_reg)
-    
+    #i need to do this
     print("fitting to pipeline")
     clf.fit(X_train, Y_train)
     print("\n### COMPLETE ###\n")
