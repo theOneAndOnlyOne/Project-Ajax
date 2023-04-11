@@ -183,6 +183,7 @@ def main():
     dataMem3 = {}
 
     # dictionary containing data frames of raw data
+    # original
     dataMem1 = read_csv_files(folder_paths[0])
     dataMem2 = read_csv_files(folder_paths[1])
     dataMem3 = read_csv_files(folder_paths[2])
