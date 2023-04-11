@@ -19,7 +19,8 @@ from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import LogisticRegression
 #from sklearn.inspection import DecisionBoundaryDisplay
 from sklearn.decomposition import PCA
-
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+#from sklearn.svm import SVC
 # Step 1: Read from csv files
 def read_csv_files(folder_path):
     """
@@ -141,14 +142,23 @@ def classifier(df):
     X_train, X_test, Y_train, Y_test = train_test_split(df[['max', 'min', 'mean', 'median', 'range', 'std', 'var', 'kurt', 'skew']], df['state'], test_size=0.1, shuffle=True)
     # create the classifier
     l_reg = LogisticRegression(max_iter = 10000)
+    rf = RandomForestClassifier(n_estimators=100, max_depth=5)
+    #svm = SVC(kernel='rbf', gamma=0.1, C=1.0)
+    #gb = GradientBoostingClassifier(n_estimators=100, learning_rate=1.0, max_depth=1)
     scaler = StandardScaler()
-    clf = make_pipeline(scaler,l_reg)
-    #i need to do this
+    clf1 = make_pipeline(scaler,l_reg)
+    clf2 = make_pipeline(scaler,rf)
+    #clf3 = make_pipeline(scaler,svm)
+    #clf4 = make_pipeline(scaler,gb)
+    #voting classifier
+    #eclf = VotingClassifier(estimators=[('lr', clf1), ('rf', clf2), ('svm', clf3)], voting='soft')
+    eclf = VotingClassifier(estimators=[('lr', clf1), ('rf', clf2)], voting='soft')
     print("fitting to pipeline")
-    clf.fit(X_train, Y_train)
+    eclf.fit(X_train, Y_train)
     print("\n### COMPLETE ###\n")
-    accuracy = clf.score(X_test,Y_test)
+    accuracy = eclf.score(X_test,Y_test)
     print('Accuracy:', accuracy)
+    return eclf
 
 # Main Function
 def main(): 
