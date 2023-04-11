@@ -1,5 +1,6 @@
 import tkinter
 import customtkinter
+import ajax_pipeline as ajax
 
 from tkinter import *
 from tkinter import filedialog
@@ -23,24 +24,16 @@ def browseFiles():
     filename = filedialog.askopenfilename(initialdir = "/",
                                           title = "Select a File",
                                           filetypes = (("Text files",
-                                                        "*.txt*"),
+                                                        "*.csv*"),
                                                        ("all files",
                                                         "*.*")))
     button.configure(text=filename);
     # the figure that will contain the plot
-  
-    # list of squares
-    y = [i**2 for i in range(101)]
-    #gs = GridSpec.GridSpec(2,2,figure = fig, left = 0.1)
-    # adding the subplot
-    plot1 = fig.add_subplot(gs[0,1])
-    #plot2 = fig.add_subplot(gs[:,1])
-    #plot3 = fig.add_subplot(gs[1,0])
-  
-    # plotting the graph
-    plot1.set_facecolor("dimgrey");
-    plot1.plot(y)
+    new_fig = ajax.evaluate_csv(filename)
+    canvas.figure = new_fig
     canvas.draw()
+    new_fig.tight_layout()
+
 frame = customtkinter.CTkFrame(master=app)
 frame.pack(pady=15,padx=60, fill="both", expand=True)
 # creating the Tkinter canvas
@@ -51,7 +44,7 @@ heading1.pack(pady=7,padx=20,side=TOP,anchor=NW)
 heading2 = customtkinter.CTkLabel(master=frame, text="Welcome to Project Ajax! Analyze your run", font=("Roboto",14))
 heading2.pack(pady=0,padx=20,anchor=NW)
 
-fig = Figure(figsize = (8.5, 3),
+fig = Figure(figsize = (8.5, 4),
              dpi = 100)
 canvas = FigureCanvasTkAgg(fig,
                            master = frame)  
@@ -68,8 +61,6 @@ toolbar.update()
 
 # placing the toolbar on the Tkinter window
 #canvas.get_tk_widget().place(relx=0.5, rely=0.5, anchor=tkinter.CENTER)
-tableHeading = customtkinter.CTkLabel(master=frame, text="Table", font=("Roboto",28))
-tableHeading.pack(pady=3,padx=20,side=TOP,anchor=NW)
 
 currFileButtonText = "Select Acceleration Data"
 # Use CTkButton instead of tkinter Button
