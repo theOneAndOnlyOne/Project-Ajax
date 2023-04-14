@@ -19,7 +19,8 @@ from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import LogisticRegression
 #from sklearn.inspection import DecisionBoundaryDisplay
 from sklearn.decomposition import PCA
-
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+#from sklearn.svm import SVC
 # Step 1: Read from csv files
 def read_csv_files(folder_path):
     """
@@ -103,10 +104,37 @@ def extract_rolling_window(data_dict):
 
 # Step 2.1 : Preprocess each dataset before extracting features
 def preprocess_dataframe(df):
-    print("Preprocessing...")
+    print("Preprocessing...")\
+    
+    window_size = 51
+    alpha = 0.1
+    df = df.rolling(window_size).mean()
+    df = df.ewm(alpha, min_periods=window_size).mean()
     sc = preprocessing.StandardScaler()
     df = pd.DataFrame(data=sc.fit_transform(df))
     return df
+
+def preprocess_preview(df):
+
+    window_size = 51
+    alpha = 2
+    df_mean = df.rolling(window_size).mean()
+    df_ewm_mean = df.ewm(alpha, min_periods=window_size).mean()
+
+    x= df.iloc[:500,0]
+    y0= df.iloc[:500,1]
+    y1= df_mean.iloc[:500,1]
+    y2= df_ewm_mean.iloc[:500,1]
+
+    fig, ax = plt.subplots(figsize=(10,10))
+    ax.plot(x, y0, linewidth=2)
+    ax.plot(x, y1, linewidth=2)
+    ax.plot(x, y2, color='red', linewidth=2)
+    ax.legend(['Original', 'Moving Average Filter', 'Exponential Rolling Average Filter'])
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    plt.show()
+
 
 # Stage 3: sort data frames into groups
 def write_dataframes_to_hdf5_group(dataframes_dict, file_path, group):
@@ -141,14 +169,23 @@ def classifier(df):
     X_train, X_test, Y_train, Y_test = train_test_split(df[['max', 'min', 'mean', 'median', 'range', 'std', 'var', 'kurt', 'skew']], df['state'], test_size=0.1, shuffle=True)
     # create the classifier
     l_reg = LogisticRegression(max_iter = 10000)
+    rf = RandomForestClassifier(n_estimators=100, max_depth=5)
+    #svm = SVC(kernel='rbf', gamma=0.1, C=1.0)
+    #gb = GradientBoostingClassifier(n_estimators=100, learning_rate=1.0, max_depth=1)
     scaler = StandardScaler()
-    clf = make_pipeline(scaler,l_reg)
-    #i need to do this
+    clf1 = make_pipeline(scaler,l_reg)
+    clf2 = make_pipeline(scaler,rf)
+    #clf3 = make_pipeline(scaler,svm)
+    #clf4 = make_pipeline(scaler,gb)
+    #voting classifier
+    #eclf = VotingClassifier(estimators=[('lr', clf1), ('rf', clf2), ('svm', clf3)], voting='soft')
+    eclf = VotingClassifier(estimators=[('lr', clf1), ('rf', clf2)], voting='soft')
     print("fitting to pipeline")
-    clf.fit(X_train, Y_train)
+    eclf.fit(X_train, Y_train)
     print("\n### COMPLETE ###\n")
-    accuracy = clf.score(X_test,Y_test)
+    accuracy = eclf.score(X_test,Y_test)
     print('Accuracy:', accuracy)
+    return eclf
 
 # Main Function
 def main(): 
@@ -186,11 +223,16 @@ def main():
     dataMem1 = read_csv_files(folder_paths[0])
     dataMem2 = read_csv_files(folder_paths[1])
     dataMem3 = read_csv_files(folder_paths[2])
-
+    
+    #print(dataMem1)
+    
     dataMem1WindowFeatures = extract_rolling_window(dataMem1)
     dataMem2WindowFeatures = extract_rolling_window(dataMem2)
     dataMem3WindowFeatures = extract_rolling_window(dataMem3)
     
+    
+    preprocess_preview(dataMem1['front_shorthops.csv'])
+
     print("Merging features from all members...")
     feature_list = []
 
