@@ -1,0 +1,817 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>LEON // Preview (mock data)</title>
+  <style>/* RE4 attache-case inventory aesthetic.
+   Palette: tactical olive, oil black, RPD blood red, paper khaki. */
+
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Special+Elite&display=swap');
+
+:root {
+  --bg-0: #0b0d09;
+  --bg-1: #14180f;
+  --bg-2: #1d2316;
+  --olive: #4d5b35;
+  --olive-bright: #8aa15a;
+  --khaki: #c9bf94;
+  --paper: #e9dfb6;
+  --blood: #8b1212;
+  --blood-bright: #c52a2a;
+  --rust: #6b3a1a;
+  --grid-line: rgba(170, 180, 130, 0.18);
+  --mono: 'Share Tech Mono', 'Courier New', monospace;
+  --stencil: 'Special Elite', 'Share Tech Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background:
+    radial-gradient(ellipse at top, #1a2010 0%, var(--bg-0) 70%) fixed,
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,0.3) 3px 4px) fixed;
+  color: var(--paper);
+  font-family: var(--mono);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* CRT scanlines overlay */
+.scanlines {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(0,0,0,0.15) 0,
+    rgba(0,0,0,0.15) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  z-index: 999;
+  mix-blend-mode: multiply;
+}
+.vignette {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.7) 100%);
+  z-index: 998;
+}
+
+/* HUD ============================================================== */
+.hud {
+  position: sticky; top: 0; z-index: 50;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 14px 28px;
+  background: linear-gradient(180deg, rgba(20,24,15,0.95), rgba(11,13,9,0.85));
+  border-bottom: 2px solid var(--olive);
+  backdrop-filter: blur(2px);
+}
+.hud-left { display: flex; flex-direction: column; }
+.brand {
+  font-family: var(--stencil);
+  font-size: 18px;
+  letter-spacing: 4px;
+  color: var(--blood-bright);
+  text-shadow: 0 0 8px rgba(197, 42, 42, 0.5);
+}
+.brand-sub {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--khaki);
+  opacity: 0.7;
+  margin-top: 2px;
+}
+.hud-tabs { display: flex; gap: 4px; justify-self: center; }
+.tab {
+  background: transparent;
+  color: var(--khaki);
+  border: 1px solid var(--olive);
+  padding: 8px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.tab:hover { background: var(--bg-2); color: var(--paper); }
+.tab.active {
+  background: var(--olive);
+  color: #0b0d09;
+  border-color: var(--olive-bright);
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.4), 0 0 8px rgba(138,161,90,0.3);
+}
+.tab.active::before {
+  content: '';
+  position: absolute;
+  left: 4px; top: 50%; transform: translateY(-50%);
+  width: 6px; height: 6px;
+  background: var(--blood-bright);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--blood-bright);
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse { 50% { opacity: 0.3; } }
+
+.hud-right { justify-self: end; display: flex; gap: 16px; align-items: center; }
+.label-pill {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--khaki);
+  border: 1px dashed var(--olive);
+  padding: 4px 10px;
+}
+.label-pill code { color: var(--olive-bright); }
+.time {
+  font-family: var(--mono);
+  color: var(--blood-bright);
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+/* MAIN ============================================================== */
+main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+}
+.view { display: none; }
+.view.active { display: block; animation: fadein 0.25s ease-out; }
+@keyframes fadein { from { opacity: 0; transform: translateY(4px); } }
+
+.panel {
+  background:
+    linear-gradient(180deg, rgba(29,35,22,0.85), rgba(20,24,15,0.85)),
+    repeating-linear-gradient(45deg, transparent 0 6px, rgba(255,255,255,0.015) 6px 7px);
+  border: 1px solid var(--olive);
+  padding: 24px;
+  margin-bottom: 24px;
+  position: relative;
+  box-shadow: 0 0 30px rgba(0,0,0,0.5), inset 0 0 60px rgba(0,0,0,0.3);
+}
+.panel::before, .panel::after {
+  content: ''; position: absolute;
+  width: 18px; height: 18px;
+  border: 2px solid var(--olive-bright);
+}
+.panel::before { top: -2px; left: -2px; border-right: none; border-bottom: none; }
+.panel::after  { bottom: -2px; right: -2px; border-left: none; border-top: none; }
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--olive);
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+}
+.panel-header h2 {
+  font-family: var(--stencil);
+  font-size: 14px;
+  letter-spacing: 4px;
+  color: var(--paper);
+  margin: 0;
+}
+.meter {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--khaki);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.meter input {
+  width: 48px;
+  background: var(--bg-1);
+  color: var(--paper);
+  border: 1px solid var(--olive);
+  padding: 4px 6px;
+  font-family: var(--mono);
+}
+
+/* INVENTORY GRID =================================================== */
+.grid-inv {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.inv-card {
+  background:
+    linear-gradient(160deg, rgba(40,48,30,0.6), rgba(20,24,15,0.9));
+  border: 1px solid var(--olive);
+  padding: 14px;
+  position: relative;
+  cursor: default;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.inv-card:hover { transform: translate(-1px, -1px); border-color: var(--blood-bright); }
+.inv-card .title {
+  font-family: var(--stencil);
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--paper);
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+.inv-card .meta {
+  font-size: 10px;
+  color: var(--khaki);
+  opacity: 0.7;
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+}
+.inv-card ul {
+  list-style: none;
+  margin: 0; padding: 0;
+  font-size: 11px;
+  color: var(--khaki);
+}
+.inv-card ul li {
+  padding: 3px 0;
+  border-bottom: 1px dotted var(--grid-line);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.inv-card ul li span:first-child {
+  color: var(--olive-bright);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inv-card .stamp {
+  position: absolute;
+  top: 8px; right: 8px;
+  font-size: 9px;
+  color: var(--blood-bright);
+  border: 1px solid var(--blood);
+  padding: 2px 5px;
+  letter-spacing: 1px;
+  transform: rotate(2deg);
+  opacity: 0.85;
+}
+
+/* TABLES =========================================================== */
+.dossier {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 24px;
+}
+.dossier th {
+  background: var(--bg-1);
+  color: var(--olive-bright);
+  font-family: var(--stencil);
+  letter-spacing: 2px;
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 2px solid var(--olive);
+  font-weight: normal;
+}
+.dossier td {
+  padding: 8px 10px;
+  border-bottom: 1px dotted var(--grid-line);
+  color: var(--paper);
+}
+.dossier tr:hover td { background: rgba(138,161,90,0.05); }
+
+/* STAT ROW ========================================================= */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.stat-cell {
+  border: 1px solid var(--olive);
+  padding: 12px;
+  background: rgba(20,24,15,0.6);
+}
+.stat-cell .label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--khaki);
+  opacity: 0.7;
+}
+.stat-cell .value {
+  font-family: var(--stencil);
+  font-size: 28px;
+  color: var(--blood-bright);
+  margin-top: 4px;
+  text-shadow: 0 0 6px rgba(197, 42, 42, 0.4);
+}
+.stat-cell .unit { font-size: 12px; color: var(--khaki); margin-left: 4px; }
+
+/* BARS ============================================================= */
+#balance-bars { margin-bottom: 24px; }
+.bar-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 80px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.bar-row .name { color: var(--olive-bright); letter-spacing: 2px; }
+.bar-track {
+  height: 14px;
+  background: var(--bg-1);
+  border: 1px solid var(--olive);
+  position: relative;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--rust), var(--blood-bright));
+  transition: width 0.4s ease-out;
+}
+.bar-row .val { text-align: right; color: var(--khaki); }
+
+/* CASE (supplements) =============================================== */
+.case-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.case-item {
+  border: 1px solid var(--olive);
+  background:
+    linear-gradient(180deg, rgba(40,48,30,0.5), rgba(20,24,15,0.9));
+  padding: 14px;
+  position: relative;
+}
+.case-item h3 {
+  font-family: var(--stencil);
+  font-size: 13px;
+  letter-spacing: 3px;
+  margin: 0 0 6px 0;
+  color: var(--paper);
+}
+.case-item .case-current {
+  font-family: var(--stencil);
+  font-size: 24px;
+  color: var(--blood-bright);
+}
+.case-item .case-target {
+  font-size: 11px; color: var(--khaki); margin-bottom: 8px;
+}
+.case-bar {
+  height: 8px; background: var(--bg-1);
+  border: 1px solid var(--olive);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.case-bar > div {
+  height: 100%;
+  background: linear-gradient(90deg, var(--olive), var(--olive-bright));
+  transition: width 0.3s;
+}
+.case-item.hit .case-bar > div {
+  background: linear-gradient(90deg, var(--blood), var(--blood-bright));
+}
+.case-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.case-actions .btn { padding: 4px 8px; font-size: 11px; }
+
+/* TIMER ============================================================ */
+.timer-panel { text-align: center; }
+.timer-display {
+  font-family: var(--stencil);
+  font-size: 96px;
+  color: var(--blood-bright);
+  letter-spacing: 8px;
+  text-shadow: 0 0 24px rgba(197, 42, 42, 0.6);
+  padding: 24px 0;
+  border: 2px solid var(--olive);
+  background: var(--bg-1);
+  margin: 16px 0;
+}
+.timer-display.small { font-size: 56px; }
+.timer-display.warn { animation: warn 0.5s infinite; color: #ffb84d; }
+.timer-display.done { animation: done 0.3s infinite alternate; }
+@keyframes warn { 50% { opacity: 0.5; } }
+@keyframes done {
+  from { background: var(--bg-1); color: var(--blood-bright); }
+  to { background: var(--blood); color: #fff; }
+}
+.timer-controls {
+  display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+  margin: 12px 0;
+}
+.btn {
+  background: var(--bg-2);
+  color: var(--paper);
+  border: 1px solid var(--olive);
+  padding: 8px 16px;
+  font-family: var(--mono);
+  letter-spacing: 2px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.btn:hover { background: var(--olive); color: #0b0d09; }
+.btn.primary { background: var(--blood); color: #fff; border-color: var(--blood-bright); }
+.btn.primary:hover { background: var(--blood-bright); }
+.btn.preset { min-width: 70px; }
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--olive);
+  color: var(--olive-bright);
+  padding: 4px 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+.btn-ghost:hover { background: var(--olive); color: #0b0d09; }
+.lap-list {
+  list-style: none;
+  padding: 0; margin: 12px auto 0;
+  max-width: 360px;
+  font-size: 13px;
+  color: var(--khaki);
+}
+.lap-list li {
+  display: flex; justify-content: space-between;
+  padding: 4px 12px;
+  border-bottom: 1px dotted var(--grid-line);
+}
+.lap-list li span:first-child { color: var(--olive-bright); }
+
+/* FOOTER =========================================================== */
+.hud-bottom {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between;
+  padding: 8px 28px;
+  background: linear-gradient(0deg, rgba(11,13,9,0.95), transparent);
+  border-top: 1px solid var(--olive);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--khaki);
+  z-index: 50;
+}
+.quote { color: var(--olive-bright); font-style: italic; }
+#status::before {
+  content: '\25CF ';
+  color: var(--blood-bright);
+  animation: pulse 1.5s infinite;
+}
+
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: var(--khaki);
+  letter-spacing: 4px;
+  animation: pulse 1.2s infinite;
+}
+.readme { font-size: 13px; line-height: 1.6; color: var(--paper); }
+.readme code { color: var(--olive-bright); background: var(--bg-1); padding: 1px 6px; }
+.readme.dim { color: var(--khaki); opacity: 0.6; font-style: italic; margin-top: 24px; }
+
+canvas { background: var(--bg-1); border: 1px solid var(--olive); margin-bottom: 24px; width: 100%; }
+
+/* error banner */
+.err {
+  background: var(--blood);
+  color: #fff;
+  padding: 12px;
+  border-left: 4px solid var(--blood-bright);
+  letter-spacing: 1px;
+  font-size: 12px;
+}
+
+/* MOBILE ============================================================ */
+@media (max-width: 720px) {
+  .hud {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+  .hud-tabs { justify-self: stretch; flex-wrap: wrap; gap: 4px; justify-content: center; }
+  .hud-right { justify-self: stretch; justify-content: space-between; }
+  .brand { font-size: 14px; letter-spacing: 2px; }
+  .brand-sub { font-size: 9px; letter-spacing: 2px; }
+  .tab { padding: 6px 10px; font-size: 11px; flex: 1 0 auto; }
+
+  main { padding: 12px; }
+  .panel { padding: 14px; }
+  .panel-header { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .panel-header h2 { font-size: 12px; letter-spacing: 2px; }
+
+  .grid-inv { grid-template-columns: 1fr; }
+  .case-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .case-item { padding: 10px; }
+  .case-item .case-current { font-size: 18px; }
+  .case-actions .btn { padding: 4px 6px; font-size: 10px; }
+
+  .timer-display { font-size: 56px; letter-spacing: 4px; padding: 14px 0; }
+  .timer-display.small { font-size: 36px; }
+  .btn { padding: 8px 12px; font-size: 11px; }
+  .btn.preset { min-width: 56px; }
+
+  .stat-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-cell { padding: 10px; }
+  .stat-cell .value { font-size: 22px; }
+
+  /* tables become horizontally scrollable */
+  .dossier { display: block; overflow-x: auto; white-space: nowrap; }
+
+  .bar-row { grid-template-columns: 60px 1fr 70px; font-size: 11px; }
+
+  .hud-bottom { padding: 6px 12px; font-size: 10px; }
+  .quote { display: none; }
+}
+</style>
+</head>
+<body>
+  <div class="scanlines"></div>
+  <div class="vignette"></div>
+
+  <header class="hud">
+    <div class="hud-left">
+      <span class="brand">RPD · TACTICAL TRAINING</span>
+      <span class="brand-sub">PREVIEW · MOCK DATA · NO API</span>
+    </div>
+    <nav class="hud-tabs">
+      <button class="tab active" data-view="inventory">INVENTORY</button>
+      <button class="tab" data-view="overload">FILES</button>
+      <button class="tab" data-view="supps">CASE</button>
+      <button class="tab" data-view="timer">TIMER</button>
+      <button class="tab" data-view="map">MAP</button>
+    </nav>
+    <div class="hud-right">
+      <span class="label-pill">LABEL: <code>v2</code></span>
+      <span class="time" id="clock">--:--:--</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="view active" id="view-inventory">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>INVENTORY — LOGGED OPERATIONS</h2>
+          <div class="meter">6 / 32 ENTRIES</div>
+        </div>
+        <div class="grid-inv"><div class="inv-card">
+      <div class="stamp">v2</div>
+      <div class="title">Push Day v2</div>
+      <div class="meta">2026-04-24 · 62m · 18 SETS · 6420 kg</div>
+      <ul><li><span>Bench Press</span><span>85kg×5</span></li><li><span>OHP</span><span>55kg×6</span></li><li><span>Incline DB</span><span>30kg×8</span></li><li><span>Tricep Pushdown</span><span>40kg×10</span></li><li><span>Lateral Raise</span><span>12kg×12</span></li></ul>
+    </div>
+<div class="inv-card">
+      <div class="stamp">v2</div>
+      <div class="title">Pull Day v2</div>
+      <div class="meta">2026-04-22 · 58m · 16 SETS · 5780 kg</div>
+      <ul><li><span>Deadlift</span><span>140kg×3</span></li><li><span>Pull-Up</span><span>BW+10×6</span></li><li><span>Barbell Row</span><span>80kg×6</span></li><li><span>Face Pull</span><span>25kg×15</span></li><li><span>Bicep Curl</span><span>16kg×10</span></li></ul>
+    </div>
+<div class="inv-card">
+      <div class="stamp">v2</div>
+      <div class="title">Legs Day v2</div>
+      <div class="meta">2026-04-20 · 71m · 17 SETS · 8240 kg</div>
+      <ul><li><span>Back Squat</span><span>120kg×5</span></li><li><span>RDL</span><span>100kg×8</span></li><li><span>Leg Press</span><span>180kg×10</span></li><li><span>Hip Thrust</span><span>120kg×8</span></li><li><span>Calf Raise</span><span>80kg×15</span></li></ul>
+    </div>
+<div class="inv-card">
+      <div class="stamp">v2</div>
+      <div class="title">Push Day v2</div>
+      <div class="meta">2026-04-17 · 60m · 18 SETS · 6280 kg</div>
+      <ul><li><span>Bench Press</span><span>82.5kg×5</span></li><li><span>OHP</span><span>52.5kg×6</span></li><li><span>Incline DB</span><span>28kg×8</span></li><li><span>Tricep Pushdown</span><span>37.5kg×10</span></li></ul>
+    </div>
+<div class="inv-card">
+      <div class="stamp">v2</div>
+      <div class="title">Pull Day v2</div>
+      <div class="meta">2026-04-15 · 55m · 16 SETS · 5640 kg</div>
+      <ul><li><span>Deadlift</span><span>137.5kg×3</span></li><li><span>Pull-Up</span><span>BW+7.5×6</span></li><li><span>Barbell Row</span><span>77.5kg×6</span></li></ul>
+    </div>
+<div class="inv-card">
+      <div class="stamp">v2</div>
+      <div class="title">Legs Day v2</div>
+      <div class="meta">2026-04-13 · 68m · 17 SETS · 8060 kg</div>
+      <ul><li><span>Back Squat</span><span>117.5kg×5</span></li><li><span>RDL</span><span>97.5kg×8</span></li><li><span>Leg Press</span><span>175kg×10</span></li></ul>
+    </div></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-overload">
+      <div class="panel">
+        <div class="panel-header"><h2>FIELD REPORT — PROGRESSIVE OVERLOAD</h2>
+          <div class="meter">LOOKBACK 5</div></div>
+        <table class="dossier">
+          <thead><tr><th>EXERCISE</th><th>LAST TOP</th><th>e1RM</th>
+            <th>TREND/SESSION</th><th>PROJECTED e1RM</th><th>NEXT TARGET</th></tr></thead>
+          <tbody><tr><td>Back Squat</td><td>120kg × 5</td><td>140.0 kg</td><td style="color:var(--olive-bright)">▲ 2.50 kg</td><td>147.5 kg</td><td><strong>122.5kg × 5</strong></td></tr>
+<tr><td>Bench Press</td><td>85kg × 5</td><td>99.2 kg</td><td style="color:var(--olive-bright)">▲ 1.25 kg</td><td>103.7 kg</td><td><strong>86.25kg × 5</strong></td></tr>
+<tr><td>Deadlift</td><td>140kg × 3</td><td>154.0 kg</td><td style="color:var(--olive-bright)">▲ 2.50 kg</td><td>161.5 kg</td><td><strong>142.5kg × 3</strong></td></tr>
+<tr><td>OHP</td><td>55kg × 6</td><td>66.0 kg</td><td style="color:var(--olive-bright)">▲ 0.75 kg</td><td>68.2 kg</td><td><strong>55.0kg × 6</strong></td></tr>
+<tr><td>Barbell Row</td><td>80kg × 6</td><td>96.0 kg</td><td style="color:var(--olive-bright)">▲ 0.50 kg</td><td>97.5 kg</td><td><strong>80.0kg × 6</strong></td></tr>
+<tr><td>Incline DB</td><td>30kg × 8</td><td>38.0 kg</td><td style="color:var(--khaki)">— 0.00 kg</td><td>38.0 kg</td><td><strong>30.0kg × 8</strong></td></tr>
+<tr><td>Tricep Pushdown</td><td>40kg × 10</td><td>53.3 kg</td><td style="color:var(--blood-bright)">▼ -0.30 kg</td><td>52.7 kg</td><td><strong>40.0kg × 10</strong></td></tr></tbody>
+        </table>
+
+        <div class="panel-header"><h2>STATISTICS DOSSIER</h2></div>
+        <div class="stat-row"><div class="stat-cell"><div class="label">WORKOUTS</div><div class="value">32<span class="unit"></span></div></div>
+<div class="stat-cell"><div class="label">TOTAL VOLUME</div><div class="value">203,840<span class="unit">kg</span></div></div>
+<div class="stat-cell"><div class="label">SETS</div><div class="value">548<span class="unit"></span></div></div>
+<div class="stat-cell"><div class="label">REPS</div><div class="value">4,127<span class="unit"></span></div></div>
+<div class="stat-cell"><div class="label">AVG DURATION</div><div class="value">62.4<span class="unit">min</span></div></div>
+<div class="stat-cell"><div class="label">TRAINING DAYS</div><div class="value">29<span class="unit"></span></div></div>
+<div class="stat-cell"><div class="label">LAST 7 DAYS</div><div class="value">4<span class="unit"></span></div></div>
+<div class="stat-cell"><div class="label">LAST 30 DAYS</div><div class="value">14<span class="unit"></span></div></div></div>
+
+        <div class="panel-header"><h2>VOLUME OVER TIME</h2></div>
+        <canvas id="vc" height="160"></canvas>
+
+        <div class="panel-header"><h2>MUSCLE BALANCE</h2></div>
+        <div><div class="bar-row"><div class="name">PUSH</div><div class="bar-track"><div class="bar-fill" style="width:23.7%"></div></div><div class="val">48,230 kg</div></div>
+<div class="bar-row"><div class="name">PULL</div><div class="bar-track"><div class="bar-fill" style="width:25.5%"></div></div><div class="val">51,970 kg</div></div>
+<div class="bar-row"><div class="name">LEGS</div><div class="bar-track"><div class="bar-fill" style="width:43.3%"></div></div><div class="val">88,240 kg</div></div>
+<div class="bar-row"><div class="name">CORE</div><div class="bar-track"><div class="bar-fill" style="width:7.6%"></div></div><div class="val">15,400 kg</div></div></div>
+
+        <div class="panel-header"><h2>PERSONAL RECORDS</h2></div>
+        <table class="dossier">
+          <thead><tr><th>EXERCISE</th><th>e1RM</th><th>TOP SET</th><th>DATE</th></tr></thead>
+          <tbody><tr><td>Deadlift</td><td>154.0 kg</td><td>140kg × 3</td><td>2026-04-22</td></tr>
+<tr><td>Back Squat</td><td>140.0 kg</td><td>120kg × 5</td><td>2026-04-20</td></tr>
+<tr><td>Bench Press</td><td>99.2 kg</td><td>85kg × 5</td><td>2026-04-24</td></tr>
+<tr><td>Hip Thrust</td><td>144.0 kg</td><td>120kg × 8</td><td>2026-04-20</td></tr>
+<tr><td>Barbell Row</td><td>96.0 kg</td><td>80kg × 6</td><td>2026-04-22</td></tr>
+<tr><td>Pull-Up</td><td>82.0 kg</td><td>BW+10kg × 6</td><td>2026-04-22</td></tr>
+<tr><td>OHP</td><td>66.0 kg</td><td>55kg × 6</td><td>2026-04-24</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="view" id="view-supps">
+      <div class="panel">
+        <div class="panel-header"><h2>ATTACHÉ CASE — SUPPLY STACK</h2>
+          <div class="meter"><span>CREATINE STREAK: 7 DAYS</span></div></div>
+        <div class="case-grid"><div class="case-item hit">
+      <h3>CREATINE</h3>
+      <div class="case-current">5 <span style="font-size:14px;color:#c9bf94">g</span></div>
+      <div class="case-target">/ 5 g ✓ TARGET MET</div>
+      <div class="case-bar"><div style="width:100%"></div></div>
+      <div class="case-actions"><button class="btn">+1g</button><button class="btn">+2.5g</button><button class="btn">+5g</button><button class="btn-ghost">RESET</button></div>
+    </div>
+<div class="case-item">
+      <h3>PROTEIN</h3>
+      <div class="case-current">142 <span style="font-size:14px;color:#c9bf94">g</span></div>
+      <div class="case-target">/ 160 g </div>
+      <div class="case-bar"><div style="width:88.75%"></div></div>
+      <div class="case-actions"><button class="btn">+25g</button><button class="btn">+40g</button><button class="btn">+60g</button><button class="btn-ghost">RESET</button></div>
+    </div>
+<div class="case-item">
+      <h3>SODIUM</h3>
+      <div class="case-current">1800 <span style="font-size:14px;color:#c9bf94">mg</span></div>
+      <div class="case-target">/ 2000 mg </div>
+      <div class="case-bar"><div style="width:90.0%"></div></div>
+      <div class="case-actions"><button class="btn">+200mg</button><button class="btn">+500mg</button><button class="btn">+1000mg</button><button class="btn-ghost">RESET</button></div>
+    </div>
+<div class="case-item">
+      <h3>POTASSIUM</h3>
+      <div class="case-current">750 <span style="font-size:14px;color:#c9bf94">mg</span></div>
+      <div class="case-target">/ 1000 mg </div>
+      <div class="case-bar"><div style="width:75.0%"></div></div>
+      <div class="case-actions"><button class="btn">+200mg</button><button class="btn">+500mg</button><button class="btn">+1000mg</button><button class="btn-ghost">RESET</button></div>
+    </div>
+<div class="case-item">
+      <h3>WATER</h3>
+      <div class="case-current">2250 <span style="font-size:14px;color:#c9bf94">ml</span></div>
+      <div class="case-target">/ 3000 ml </div>
+      <div class="case-bar"><div style="width:75.0%"></div></div>
+      <div class="case-actions"><button class="btn">+250ml</button><button class="btn">+500ml</button><button class="btn">+750ml</button><button class="btn-ghost">RESET</button></div>
+    </div></div>
+        <div class="panel-header"><h2>7-DAY LOG</h2></div>
+        <table class="dossier">
+          <thead><tr><th>DATE</th><th>CREATINE</th><th>PROTEIN</th><th>WATER</th></tr></thead>
+          <tbody><tr><td>2026-04-18</td><td style="color:var(--olive-bright)">5 g ✓</td><td>165 g ✓</td><td>2800 ml</td></tr>
+<tr><td>2026-04-19</td><td style="color:var(--olive-bright)">5 g ✓</td><td>172 g ✓</td><td>3100 ml</td></tr>
+<tr><td>2026-04-20</td><td style="color:var(--olive-bright)">5 g ✓</td><td>158 g</td><td>2900 ml</td></tr>
+<tr><td>2026-04-21</td><td style="color:var(--olive-bright)">5 g ✓</td><td>164 g ✓</td><td>3200 ml</td></tr>
+<tr><td>2026-04-22</td><td style="color:var(--olive-bright)">5 g ✓</td><td>171 g ✓</td><td>2700 ml</td></tr>
+<tr><td>2026-04-23</td><td style="color:var(--olive-bright)">5 g ✓</td><td>159 g</td><td>2400 ml</td></tr>
+<tr><td>2026-04-24</td><td style="color:var(--olive-bright)">5 g ✓</td><td>142 g</td><td>2250 ml</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="view" id="view-timer">
+      <div class="panel timer-panel">
+        <div class="panel-header"><h2>MISSION CLOCK</h2></div>
+        <div class="timer-display" id="td">02:00</div>
+        <div class="timer-controls">
+          <button class="btn preset" data-p="60">0:60</button>
+          <button class="btn preset" data-p="90">1:30</button>
+          <button class="btn preset" data-p="120">2:00</button>
+          <button class="btn preset" data-p="180">3:00</button>
+          <button class="btn preset" data-p="300">5:00</button>
+        </div>
+        <div class="timer-controls">
+          <button class="btn primary" id="ts">START</button>
+          <button class="btn" id="tp">PAUSE</button>
+          <button class="btn" id="tr">RESET</button>
+        </div>
+        <div class="panel-header" style="margin-top:32px;"><h2>STOPWATCH</h2></div>
+        <div class="timer-display small">14:32.7</div>
+        <ul class="lap-list">
+          <li><span>SET 04</span><span>00:48.2 (total 14:32.7)</span></li>
+          <li><span>SET 03</span><span>03:21.4 (total 13:44.5)</span></li>
+          <li><span>SET 02</span><span>02:58.9 (total 10:23.1)</span></li>
+          <li><span>SET 01</span><span>02:44.3 (total 07:24.2)</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="view" id="view-map">
+      <div class="panel">
+        <div class="panel-header"><h2>OPERATIONS MAP</h2></div>
+        <p class="readme">This is the offline preview with mock data. The
+          live app pulls real workouts from your Hevy account, filtered to
+          titles containing <code>v2</code>.</p>
+        <ul class="readme">
+          <li><strong>INVENTORY</strong> — every v2 workout as an inventory slot.</li>
+          <li><strong>FILES</strong> — projected progressive overload, stats, PRs, weekly volume.</li>
+          <li><strong>CASE</strong> — daily creatine/protein/electrolyte/water log with streaks.</li>
+          <li><strong>TIMER</strong> — rest countdown + workout stopwatch.</li>
+        </ul>
+        <p class="readme dim">"Saved your progress. Don't waste it."</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="hud-bottom">
+    <span id="status">SYSTEM ONLINE — PREVIEW MODE</span>
+    <span class="quote">« Mock data. Deploy for the real thing. »</span>
+  </footer>
+
+  <script>
+    // tabs
+    document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+      document.querySelectorAll(".view").forEach(x => x.classList.remove("active"));
+      t.classList.add("active");
+      document.getElementById("view-" + t.dataset.view).classList.add("active");
+    });
+    // clock
+    setInterval(() => document.getElementById("clock").textContent =
+      new Date().toLocaleTimeString("en-GB"), 1000);
+    // tiny working countdown for the timer view
+    let rem = 120, end = null, iv = null;
+    const fmt = s => { s = Math.max(0, Math.ceil(s));
+      return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); };
+    const td = document.getElementById("td");
+    const tick = () => {
+      const r = end ? (end - Date.now())/1000 : rem;
+      td.textContent = fmt(r);
+      td.classList.toggle("warn", r > 0 && r <= 5);
+      if (r <= 0 && end) { td.classList.add("done"); clearInterval(iv); iv = null; end = null; rem = 0; }
+    };
+    document.querySelectorAll(".preset").forEach(b => b.onclick = () => {
+      rem = +b.dataset.p; end = null; td.classList.remove("done","warn"); tick();
+    });
+    document.getElementById("ts").onclick = () => {
+      if (rem <= 0) rem = 120;
+      end = Date.now() + rem*1000;
+      td.classList.remove("done");
+      if (iv) clearInterval(iv); iv = setInterval(tick, 250); tick();
+    };
+    document.getElementById("tp").onclick = () => {
+      if (!end) return; rem = (end-Date.now())/1000; end = null;
+      if (iv) { clearInterval(iv); iv = null; }
+    };
+    document.getElementById("tr").onclick = () => {
+      end = null; rem = 120; if (iv) { clearInterval(iv); iv = null; }
+      td.classList.remove("done","warn"); tick();
+    };
+    tick();
+    // simple bar chart for weekly volume
+    (function () {
+      const c = document.getElementById("vc");
+      const series = [{w:"W12",v:14820},{w:"W13",v:16200},{w:"W14",v:15640},{w:"W15",v:17880},{w:"W16",v:18920},{w:"W17",v:20480},{w:"W18",v:19320},{w:"W19",v:22140}];
+      const ctx = c.getContext("2d");
+      const w = c.clientWidth || 800, h = 160; c.width = w;
+      const max = Math.max(...series.map(s => s.v));
+      const barW = (w-60) / series.length;
+      ctx.strokeStyle = "#4d5b35";
+      ctx.beginPath(); ctx.moveTo(50,10); ctx.lineTo(50,h-24); ctx.lineTo(w-8,h-24); ctx.stroke();
+      series.forEach((s,i) => {
+        const bh = (s.v/max) * (h-40) | 0;
+        const x = 52 + i*barW, y = h-24-bh;
+        const g = ctx.createLinearGradient(0,y,0,y+bh);
+        g.addColorStop(0,"#c52a2a"); g.addColorStop(1,"#6b3a1a");
+        ctx.fillStyle = g; ctx.fillRect(x, y, barW-4, bh);
+        ctx.fillStyle = "#c9bf94"; ctx.font = "9px monospace";
+        ctx.save(); ctx.translate(x+barW/2, h-8); ctx.rotate(-Math.PI/6);
+        ctx.fillText(s.w, -16, 0); ctx.restore();
+      });
+      ctx.fillStyle = "#8aa15a"; ctx.font = "10px monospace";
+      ctx.fillText(max.toLocaleString()+" kg", 4, 14);
+    })();
+  </script>
+</body>
+</html>
