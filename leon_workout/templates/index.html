@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S.T.A.R.S. // Tactical Training Console</title>
+  <link rel="stylesheet" href="/static/css/leon.css" />
+</head>
+<body>
+  <div class="scanlines"></div>
+  <div class="vignette"></div>
+
+  <header class="hud">
+    <div class="hud-left">
+      <span class="brand">RPD &middot; TACTICAL TRAINING</span>
+      <span class="brand-sub">OPERATOR // L.S. KENNEDY</span>
+    </div>
+    <nav class="hud-tabs">
+      <button class="tab active" data-view="inventory">INVENTORY</button>
+      <button class="tab" data-view="overload">FILES</button>
+      <button class="tab" data-view="supps">CASE</button>
+      <button class="tab" data-view="timer">TIMER</button>
+      <button class="tab" data-view="map">MAP</button>
+    </nav>
+    <div class="hud-right">
+      <span class="label-pill">LABEL: <code id="label">{{ label }}</code></span>
+      <span class="time" id="clock">--:--:--</span>
+    </div>
+  </header>
+
+  <main id="stage">
+    <!-- INVENTORY: workout list -->
+    <section class="view active" id="view-inventory">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>INVENTORY &mdash; LOGGED OPERATIONS</h2>
+          <div class="meter">
+            <span id="match-count">--</span> / <span id="total-count">--</span> ENTRIES
+            <button class="btn-ghost" id="refresh-btn">REFRESH</button>
+          </div>
+        </div>
+        <div class="grid-inv" id="workouts-grid">
+          <div class="loading">LOADING SAVE FILE...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FILES: progressive overload -->
+    <section class="view" id="view-overload">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>FIELD REPORT &mdash; PROGRESSIVE OVERLOAD</h2>
+          <div class="meter">
+            LOOKBACK
+            <input type="number" id="lookback" min="2" max="20" value="5" />
+            <button class="btn-ghost" id="overload-refresh">RECALCULATE</button>
+          </div>
+        </div>
+        <table class="dossier" id="overload-table">
+          <thead>
+            <tr>
+              <th>EXERCISE</th><th>LAST TOP</th><th>e1RM</th>
+              <th>TREND/SESSION</th><th>PROJECTED e1RM</th><th>NEXT TARGET</th>
+            </tr>
+          </thead>
+          <tbody><tr><td colspan="6" class="loading">CALCULATING...</td></tr></tbody>
+        </table>
+
+        <div class="panel-header">
+          <h2>STATISTICS DOSSIER</h2>
+        </div>
+        <div class="stat-row" id="stat-row"></div>
+
+        <div class="panel-header"><h2>VOLUME OVER TIME</h2></div>
+        <canvas id="volume-chart" height="160"></canvas>
+
+        <div class="panel-header"><h2>MUSCLE BALANCE</h2></div>
+        <div id="balance-bars"></div>
+
+        <div class="panel-header"><h2>PERSONAL RECORDS</h2></div>
+        <table class="dossier" id="pr-table">
+          <thead><tr><th>EXERCISE</th><th>e1RM</th><th>TOP SET</th><th>DATE</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CASE: supplements -->
+    <section class="view" id="view-supps">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>ATTACH&Eacute; CASE &mdash; SUPPLY STACK</h2>
+          <div class="meter"><span id="streak-pill">CREATINE STREAK: --</span></div>
+        </div>
+        <div class="case-grid" id="case-grid"></div>
+        <div class="panel-header"><h2>7-DAY LOG</h2></div>
+        <table class="dossier" id="supps-history">
+          <thead><tr><th>DATE</th><th>CREATINE</th><th>PROTEIN</th><th>WATER</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TIMER -->
+    <section class="view" id="view-timer">
+      <div class="panel timer-panel">
+        <div class="panel-header"><h2>MISSION CLOCK</h2></div>
+        <div class="timer-display" id="timer-display">00:00</div>
+        <div class="timer-controls">
+          <button class="btn preset" data-preset="60">0:60</button>
+          <button class="btn preset" data-preset="90">1:30</button>
+          <button class="btn preset" data-preset="120">2:00</button>
+          <button class="btn preset" data-preset="180">3:00</button>
+          <button class="btn preset" data-preset="300">5:00</button>
+        </div>
+        <div class="timer-controls">
+          <button class="btn primary" id="timer-start">START</button>
+          <button class="btn" id="timer-pause">PAUSE</button>
+          <button class="btn" id="timer-reset">RESET</button>
+        </div>
+        <div class="timer-controls">
+          <label>CUSTOM (sec): <input type="number" id="timer-custom" min="5" max="3600" value="120" /></label>
+          <button class="btn" id="timer-set-custom">SET</button>
+        </div>
+        <div class="panel-header" style="margin-top:32px;"><h2>STOPWATCH</h2></div>
+        <div class="timer-display small" id="stopwatch-display">00:00.0</div>
+        <div class="timer-controls">
+          <button class="btn primary" id="sw-start">START</button>
+          <button class="btn" id="sw-lap">LAP</button>
+          <button class="btn" id="sw-reset">RESET</button>
+        </div>
+        <ul id="lap-list" class="lap-list"></ul>
+      </div>
+    </section>
+
+    <!-- MAP: meta -->
+    <section class="view" id="view-map">
+      <div class="panel">
+        <div class="panel-header"><h2>OPERATIONS MAP</h2></div>
+        <p class="readme">
+          Filtering Hevy workouts whose title or description contains
+          <code id="label2">{{ label }}</code>. Change <code>LEON_LABEL</code>
+          in <code>.env</code> to re-route to a different program.
+        </p>
+        <ul class="readme">
+          <li><strong>INVENTORY</strong> &mdash; raw v2 workouts with sets / reps / weight.</li>
+          <li><strong>FILES</strong> &mdash; per-exercise progressive-overload projection (linear fit on e1RM, suggests +1.25 kg increments).</li>
+          <li><strong>CASE</strong> &mdash; daily creatine / protein / electrolyte / water log with streaks.</li>
+          <li><strong>TIMER</strong> &mdash; rest-period countdown + workout stopwatch.</li>
+        </ul>
+        <p class="readme dim">"Your right hand comes off." &mdash; if you skip leg day.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="hud-bottom">
+    <span id="status">SYSTEM ONLINE</span>
+    <span class="quote" id="leon-quote">&laquo; Loading transmission... &raquo;</span>
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
