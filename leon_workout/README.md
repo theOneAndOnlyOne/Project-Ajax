@@ -47,6 +47,74 @@ Open http://127.0.0.1:5000
   with lap splits for whole-workout timing.
 - **MAP** — quick reference / config notes.
 
+## Hosting
+
+The app is a normal WSGI application — gunicorn is in `requirements.txt`
+and a `Dockerfile`, `Procfile`, and `fly.toml` are included. Pick one:
+
+### Option 1: Fly.io (recommended — free tier, ~5 min)
+
+```bash
+brew install flyctl   # or: curl -L https://fly.io/install.sh | sh
+cd leon_workout
+fly auth login
+fly launch --no-deploy --copy-config       # accept defaults; rename app if 'leon-tactical' is taken
+fly volumes create leon_data --size 1      # persists data/supplements.json
+fly secrets set HEVY_API_KEY=your-rotated-key LEON_PASSWORD=pickAStrongOne
+fly deploy
+```
+
+You'll get an `https://<app>.fly.dev` URL. Auto-stops when idle, ~$0/mo
+for one user.
+
+### Option 2: Render / Railway / Heroku-likes
+
+Push the repo, point the service at `leon_workout/`, set the start command
+to use the `Procfile` (most platforms detect it). Add env vars:
+`HEVY_API_KEY`, `LEON_PASSWORD`. Mount a persistent disk at `/app/data`
+if you want supplement history to survive redeploys.
+
+### Option 3: Docker on any VPS
+
+```bash
+cd leon_workout
+docker build -t leon .
+docker run -d --name leon -p 8080:8080 \
+  -e HEVY_API_KEY=your-rotated-key \
+  -e LEON_PASSWORD=pickAStrongOne \
+  -v leon_data:/app/data \
+  --restart unless-stopped leon
+```
+
+Then put nginx / Caddy / Cloudflare Tunnel in front for TLS.
+
+### Option 4: Just expose your laptop (for the gym)
+
+Run locally, then expose with one of these — no server, no deploy:
+
+```bash
+# Cloudflare Tunnel (free, handles TLS + auth):
+cloudflared tunnel --url http://localhost:5000
+
+# ngrok (free tier):
+ngrok http 5000
+```
+
+For either, set `LEON_PASSWORD` first or anyone with the URL can read your data.
+
+### Option 5: Tailscale (zero public exposure)
+
+If you only need it on your own devices, run locally and join your laptop
++ phone to a Tailscale tailnet. The app is then reachable at
+`http://<machine>:5000` from your phone in the gym, with no public surface.
+
+### Auth
+
+Set `LEON_PASSWORD` (and optionally `LEON_USERNAME`, default `leon`) to
+gate the whole app behind HTTP Basic Auth. **Required for any public
+deployment** — otherwise anyone with the URL can read your workouts and
+write to your supplement log. Leave blank for local-only use.
+
 ## Notes
 
 - The Hevy API has no native "label" concept, so v2 filtering is a substring

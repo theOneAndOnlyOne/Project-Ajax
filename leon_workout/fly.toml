@@ -1,0 +1,29 @@
+# Fly.io config. Run from this directory:
+#   fly launch --no-deploy --copy-config
+#   fly secrets set HEVY_API_KEY=your-rotated-key
+#   fly volumes create leon_data --size 1
+#   fly deploy
+
+app = "leon-tactical"        # rename if taken
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  LEON_LABEL = "v2"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[mounts]]
+  source = "leon_data"
+  destination = "/app/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

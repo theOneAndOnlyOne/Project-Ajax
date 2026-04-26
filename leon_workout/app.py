@@ -10,11 +10,12 @@ Run:
 """
 from __future__ import annotations
 
+import hmac
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request
 
 import analytics
 import supplements
@@ -25,6 +26,27 @@ load_dotenv(Path(__file__).parent / ".env")
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
 LABEL = os.environ.get("LEON_LABEL", "v2")
+PASSWORD = os.environ.get("LEON_PASSWORD", "").strip()
+USERNAME = os.environ.get("LEON_USERNAME", "leon").strip()
+
+
+@app.before_request
+def _basic_auth():
+    """Optional HTTP Basic Auth gate. Disabled when LEON_PASSWORD is unset."""
+    if not PASSWORD:
+        return None
+    auth = request.authorization
+    if (
+        auth
+        and hmac.compare_digest(auth.username or "", USERNAME)
+        and hmac.compare_digest(auth.password or "", PASSWORD)
+    ):
+        return None
+    return Response(
+        "ACCESS DENIED // R.P.D. CLEARANCE REQUIRED",
+        401,
+        {"WWW-Authenticate": 'Basic realm="leon"'},
+    )
 
 
 def _client():
@@ -124,5 +146,6 @@ def api_supplements_targets():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("LEON_PORT", 5000))
-    app.run(host="127.0.0.1", port=port, debug=True)
+    port = int(os.environ.get("PORT", os.environ.get("LEON_PORT", 5000)))
+    host = os.environ.get("LEON_HOST", "127.0.0.1")
+    app.run(host=host, port=port, debug=os.environ.get("FLASK_DEBUG") == "1")
